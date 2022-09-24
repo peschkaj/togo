@@ -7,6 +7,7 @@ A TODO app written in Go
 - [X] Add a due date
 - [ ] Sort by title 
 - [X] Sort by due date
+- [ ] Don't copy tasks into the index, store a pointer
 - [ ] Create a project and associate TODOs with a project
 - [ ] Add priority levels
 - [ ] Sort by date or priority + date
