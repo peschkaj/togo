@@ -6,27 +6,27 @@ import (
 	"time"
 )
 
-type MemoryStore struct {
+type InMemoryStore struct {
 	ts        art.Tree
 	byDueDate art.Tree
 }
 
-func NewMemoryStore() MemoryStore {
-	return MemoryStore{ts: art.New(), byDueDate: art.New()}
+func NewMemoryStore() InMemoryStore {
+	return InMemoryStore{ts: art.New(), byDueDate: art.New()}
 }
 
-func (ms *MemoryStore) AddOrUpdateTask(t togo.Task) {
+func (ms InMemoryStore) AddOrUpdateTask(t togo.Task) {
 	ms.ts.Insert(art.Key(t.Name), t)
 	addOrUpdateByDueDate(ms.byDueDate, t)
 }
 
-func (ms *MemoryStore) RemoveTask(t togo.Task) bool {
+func (ms InMemoryStore) RemoveTask(t togo.Task) bool {
 	_, removed := ms.ts.Delete(art.Key(t.Name))
 	removeByDueDate(ms.byDueDate, t)
 	return removed
 }
 
-func (ms *MemoryStore) FindTaskByName(name string) (*togo.Task, bool) {
+func (ms InMemoryStore) FindTaskByName(name string) (*togo.Task, bool) {
 	value, found := ms.ts.Search(art.Key(name))
 
 	if !found {
@@ -41,7 +41,7 @@ func (ms *MemoryStore) FindTaskByName(name string) (*togo.Task, bool) {
 	}
 }
 
-func (ms *MemoryStore) FindByDueDate(dueDate *time.Time) []togo.Task {
+func (ms InMemoryStore) FindByDueDate(dueDate *time.Time) []togo.Task {
 	key := dateToKey(dueDate)
 	value, found := ms.byDueDate.Search(key)
 	if !found {
@@ -56,11 +56,11 @@ func (ms *MemoryStore) FindByDueDate(dueDate *time.Time) []togo.Task {
 	}
 }
 
-func (ms *MemoryStore) Count() int {
+func (ms InMemoryStore) Count() int {
 	return ms.ts.Size()
 }
 
-func (ms *MemoryStore) All() []togo.Task {
+func (ms InMemoryStore) All() []togo.Task {
 	items := []togo.Task{}
 
 	iter := ms.ts.Iterator()
@@ -82,7 +82,7 @@ func (ms *MemoryStore) All() []togo.Task {
 	return items
 }
 
-func (ms *MemoryStore) OverdueTasks() []togo.Task {
+func (ms InMemoryStore) OverdueTasks() []togo.Task {
 	iter := ms.byDueDate.Iterator()
 	var tasks []togo.Task
 	now := time.Now().UTC()
