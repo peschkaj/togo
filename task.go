@@ -43,3 +43,7 @@ func (t *Task) AddDueDate(due time.Time) {
 func (t *Task) DueDate() *time.Time {
 	return t.dueDate
 }
+
+func (t *Task) Created() time.Time {
+	return t.created
+}
