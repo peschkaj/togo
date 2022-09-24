@@ -4,8 +4,9 @@ A TODO app written in Go
 ## Project plan
 
 - [ ] Save basic TODO items with a title and description
-- [ ] Add a due date
-- [ ] Sort by title or due date
+- [X] Add a due date
+- [ ] Sort by title 
+- [X] Sort by due date
 - [ ] Create a project and associate TODOs with a project
 - [ ] Add priority levels
 - [ ] Sort by date or priority + date
