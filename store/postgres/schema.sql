@@ -4,10 +4,19 @@ CREATE TABLE IF NOT EXISTS togo.tasks (
     id BIGSERIAL PRIMARY KEY ,
     name VARCHAR(100) NOT NULL,
     description VARCHAR NOT NULL,
-    created_on timestamptz NOT NULL,
-    completed_on timestamptz NULL,
-    due_date timestamptz NULL
+    created_on TIMESTAMPTZ NOT NULL,
+    completed_on TIMESTAMPTZ NULL,
+    due_date TIMESTAMPTZ NULL
 );
 
 CREATE UNIQUE INDEX ux_tasks_name ON togo.tasks(name);
 CREATE INDEX ix_tasks_due_date ON togo.tasks(due_date);
+
+CREATE ROLE togo_user
+    LOGIN
+    NOSUPERUSER
+    PASSWORD 'forhere';
+
+GRANT USAGE ON SCHEMA togo TO togo_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA togo TO togo_user;
+GRANT SELECT, USAGE ON ALL SEQUENCES IN SCHEMA togo TO togo_user;

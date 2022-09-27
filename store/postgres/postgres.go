@@ -39,6 +39,15 @@ func (p PgStore) AddOrUpdateTask(t togo.Task) {
 	}
 }
 
+func (p PgStore) RemoveTask(task togo.Task) bool {
+	err := p.queries.RemoveTask(context.TODO(), task.Name)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
 func timeToNullTime(time *time.Time) sql.NullTime {
 	if time == nil {
 		return sql.NullTime{Valid: false}
