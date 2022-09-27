@@ -7,17 +7,17 @@ import (
 type Task struct {
 	Name        string
 	Description string
-	created     time.Time
-	completed   *time.Time
+	Created     time.Time
+	Completed   *time.Time
 	dueDate     *time.Time
 }
 
 func NewTask(name, description string) Task {
-	return Task{Name: name, Description: description, created: time.Now().UTC()}
+	return Task{Name: name, Description: description, Created: time.Now().UTC()}
 }
 
-func (t *Task) Completed() bool {
-	return t.completed != nil && t.completed.After(time.Now().UTC())
+func (t *Task) IsCompleted() bool {
+	return t.Completed != nil && t.Completed.After(time.Now().UTC())
 }
 
 func (t *Task) Overdue() bool {
@@ -26,11 +26,11 @@ func (t *Task) Overdue() bool {
 
 func (t *Task) Complete() {
 	completionTime := time.Now().UTC()
-	t.completed = &completionTime
+	t.Completed = &completionTime
 }
 
 func (t *Task) CompletionDate() *time.Time {
-	return t.completed
+	return t.Completed
 }
 
 // AddDueDate strips off the time component and stores the result as the due date
@@ -40,10 +40,6 @@ func (t *Task) AddDueDate(due time.Time) {
 	t.dueDate = &newDate
 }
 
-func (t *Task) DueDate() *time.Time {
+func (t *Task) DueOn() *time.Time {
 	return t.dueDate
-}
-
-func (t *Task) Created() time.Time {
-	return t.created
 }

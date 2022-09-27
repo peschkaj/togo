@@ -23,14 +23,13 @@ func NewPgStore(connectionURI string) PgStore {
 }
 
 func (p PgStore) AddOrUpdateTask(t togo.Task) {
-	due := timeToNullTime(t.DueDate())
-	completed := timeToNullTime(t.CompletionDate())
+
 	params := AddOrUpdateTaskParams{
 		Name:        t.Name,
 		Description: t.Description,
-		CreatedOn:   t.Created(),
-		DueDate:     due,
-		CompletedOn: completed,
+		CreatedOn:   t.Created,
+		DueDate:     timeToNullTime(t.DueOn()),
+		CompletedOn: timeToNullTime(t.Completed),
 	}
 
 	err := p.queries.AddOrUpdateTask(context.TODO(), params)
@@ -46,6 +45,34 @@ func (p PgStore) RemoveTask(task togo.Task) bool {
 	}
 
 	return true
+}
+
+func (p PgStore) FindTaskByName(name string) (*togo.Task, bool) {
+	byName, err := p.queries.FindByName(context.TODO(), name)
+	if err != nil {
+		return nil, false
+	}
+
+	task := togo.Task{
+		Name:        byName.Name,
+		Description: byName.Description,
+		Created:     byName.CreatedOn,
+		Completed:   nullTimeToTime(byName.CompletedOn),
+	}
+
+	if byName.DueDate.Valid {
+		task.AddDueDate(byName.DueDate.Time)
+	}
+
+	return &task, true
+}
+
+func nullTimeToTime(time sql.NullTime) *time.Time {
+	if !time.Valid {
+		return nil
+	}
+
+	return &time.Time
 }
 
 func timeToNullTime(time *time.Time) sql.NullTime {

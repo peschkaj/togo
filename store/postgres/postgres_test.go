@@ -52,3 +52,38 @@ func TestTaskCanBeRemoved(t *testing.T) {
 		t.Error("unable to remove task")
 	}
 }
+
+func TestTaskCanBeRetrievedByName(t *testing.T) {
+	pg := NewPgStore(connectionString)
+	f := faker.New()
+
+	taskName := f.Person().Name()
+	expected := togo.NewTask(taskName, f.Lorem().Paragraph(3))
+	pg.AddOrUpdateTask(expected)
+
+	outcome, found := pg.FindTaskByName(taskName)
+
+	if !found {
+		t.Error("unable to find task by name")
+	}
+
+	if outcome.Name != expected.Name {
+		t.Error("names do not match")
+	}
+
+	if outcome.Description != expected.Description {
+		t.Error("descriptions do not match")
+	}
+
+	if outcome.Created.Equal(expected.Created) {
+		t.Error("creation dates do not match")
+	}
+
+	if outcome.DueOn() != expected.DueOn() {
+		t.Error("due dates do not match")
+	}
+
+	if outcome.Completed != expected.Completed {
+		t.Error("completion dates do not match")
+	}
+}

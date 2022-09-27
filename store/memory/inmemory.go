@@ -100,11 +100,11 @@ loop:
 				continue
 			}
 
-			if nodeTasks[0].DueDate() == nil {
+			if nodeTasks[0].DueOn() == nil {
 				continue
 			}
 
-			if nodeTasks[0].DueDate().After(now) {
+			if nodeTasks[0].DueOn().After(now) {
 				break loop
 			}
 			tasks = append(tasks, nodeTasks[:]...)
@@ -115,12 +115,12 @@ loop:
 }
 
 func addOrUpdateByDueDate(tree art.Tree, t togo.Task) {
-	key := dateToKey(t.DueDate())
+	key := dateToKey(t.DueOn())
 	updateIndex(tree, key, t)
 }
 
 func removeByDueDate(tree art.Tree, t togo.Task) bool {
-	key := dateToKey(t.DueDate())
+	key := dateToKey(t.DueOn())
 
 	return removeFromIndex(tree, key, t)
 }
