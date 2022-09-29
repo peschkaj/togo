@@ -1,3 +1,15 @@
+-- create schema
+CREATE SCHEMA togo;
+
+CREATE TABLE IF NOT EXISTS togo.tasks (
+    id BIGSERIAL PRIMARY KEY ,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR NOT NULL,
+    created_on TIMESTAMPTZ(6) NOT NULL,
+    completed_on TIMESTAMPTZ(6) NULL,
+    due_date TIMESTAMPTZ(6) NULL
+);
+
 -- name: AddOrUpdateTask :exec
 INSERT INTO togo.tasks (name, description, created_on, completed_on, due_date)
 VALUES ($1, $2, $3, $4, $5)

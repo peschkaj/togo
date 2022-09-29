@@ -6,27 +6,22 @@ package postgres
 
 import (
 	"context"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/jackc/pgconn"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
 )
 
 type DBTX interface {
-	Exec(context.Context, string, ...interface{}) (pgconn.CommandTag, error)
-	Query(context.Context, string, ...interface{}) (pgx.Rows, error)
-	QueryRow(context.Context, string, ...interface{}) pgx.Row
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
 }
 
-func New(db DBTX) *Queries {
-	return &Queries{db: db}
+func New(db *pgxpool.Pool) *Queries {
+	return &Queries{db}
 }
 
 type Queries struct {
-	db DBTX
-}
-
-func (q *Queries) WithTx(tx pgx.Tx) *Queries {
-	return &Queries{
-		db: tx,
-	}
+	db *pgxpool.Pool
 }

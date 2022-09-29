@@ -7,23 +7,23 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
+	"github.com/jackc/pgtype"
 	"time"
 )
 
-const addOrUpdateTask = `-- name: AddOrUpdateTask :exec
-INSERT INTO togo.tasks (name, description, created_on, completed_on, due_date)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (name) DO UPDATE
-    SET description = $2, created_on = $3, completed_on = $4, due_date = $5
-`
+//const addOrUpdateTask = `-- name: AddOrUpdateTask :exec
+//INSERT INTO togo.tasks (name, description, created_on, completed_on, due_date)
+//VALUES ($1, $2, $3, $4, $5)
+//ON CONFLICT (name) DO UPDATE
+//    SET description = $2, created_on = $3, completed_on = $4, due_date = $5
+//`
 
 type AddOrUpdateTaskParams struct {
 	Name        string
 	Description string
-	CreatedOn   time.Time
-	CompletedOn sql.NullTime
-	DueDate     sql.NullTime
+	CreatedOn   pgtype.Timestamptz
+	CompletedOn pgtype.Timestamptz
+	DueDate     pgtype.Timestamptz
 }
 
 func (q *Queries) AddOrUpdateTask(ctx context.Context, arg AddOrUpdateTaskParams) error {
@@ -47,7 +47,7 @@ func (q *Queries) AllTasks(ctx context.Context) ([]TogoTask, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []TogoTask{}
+	var items []TogoTask
 	for rows.Next() {
 		var i TogoTask
 		if err := rows.Scan(
@@ -83,13 +83,13 @@ const findByDueDate = `-- name: FindByDueDate :many
 SELECT id, name, description, created_on, completed_on, due_date FROM togo.tasks WHERE due_date = $1
 `
 
-func (q *Queries) FindByDueDate(ctx context.Context, dueDate sql.NullTime) ([]TogoTask, error) {
+func (q *Queries) FindByDueDate(ctx context.Context, dueDate *time.Time) ([]TogoTask, error) {
 	rows, err := q.db.Query(ctx, findByDueDate, dueDate)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []TogoTask{}
+	var items []TogoTask
 	for rows.Next() {
 		var i TogoTask
 		if err := rows.Scan(
@@ -110,9 +110,7 @@ func (q *Queries) FindByDueDate(ctx context.Context, dueDate sql.NullTime) ([]To
 	return items, nil
 }
 
-const findByName = `-- name: FindByName :one
-SELECT id, name, description, created_on, completed_on, due_date FROM togo.tasks WHERE name = $1
-`
+
 
 func (q *Queries) FindByName(ctx context.Context, name string) (TogoTask, error) {
 	row := q.db.QueryRow(ctx, findByName, name)
@@ -132,13 +130,13 @@ const findOverdueTasks = `-- name: FindOverdueTasks :many
 SELECT id, name, description, created_on, completed_on, due_date FROM togo.tasks WHERE due_date < $1
 `
 
-func (q *Queries) FindOverdueTasks(ctx context.Context, dueDate sql.NullTime) ([]TogoTask, error) {
+func (q *Queries) FindOverdueTasks(ctx context.Context, dueDate *time.Time) ([]TogoTask, error) {
 	rows, err := q.db.Query(ctx, findOverdueTasks, dueDate)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []TogoTask{}
+	var items []TogoTask
 	for rows.Next() {
 		var i TogoTask
 		if err := rows.Scan(
