@@ -159,10 +159,49 @@ func TestTasksCanBeRetrievedByDueDate(t *testing.T) {
 			t.Error(err)
 			return
 		}
-
 	}
 
 	found, err := pg.FindTasksByDueDate(created)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if len(found) != 3 {
+		t.Errorf("expected %d found %d", 3, len(found))
+	}
+}
+
+func TestOverdueTasksCanBeRetrieved(t *testing.T) {
+	pg := NewPgStore(connectionString)
+	f := faker.New()
+
+	var created = time.Now()
+	var due = created.Add(-24 * time.Hour)
+
+	tasks := []togo.Task{
+		{Name: f.Person().Name(), Description: f.Lorem().Paragraph(3), Created: created, DueDate: &due},
+		{Name: f.Person().Name(), Description: f.Lorem().Paragraph(3), Created: created, DueDate: &due},
+		{Name: f.Person().Name(), Description: f.Lorem().Paragraph(3), Created: created, DueDate: &due},
+		{Name: f.Person().Name(), Description: f.Lorem().Paragraph(3), Created: *daysFromNow(-1), Completed: daysFromNow(1)},
+		{Name: f.Person().Name(), Description: f.Lorem().Paragraph(3), Created: *daysFromNow(-2), Completed: daysFromNow(2)},
+	}
+
+	for _, task := range tasks {
+		err := pg.AddOrUpdateTask(task)
+		t.Cleanup(func() {
+			err := pg.RemoveTask(task.Name)
+			if err != nil {
+				return
+			}
+		})
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	found, err := pg.FindOverdueTasks()
 	if err != nil {
 		t.Error(err)
 		return

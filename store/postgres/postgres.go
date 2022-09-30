@@ -3,7 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/peschkaj/togo"
 	"time"
 )
@@ -35,8 +35,14 @@ FROM togo.tasks
 WHERE due_date BETWEEN $1 AND $2;
 `
 
+const findOverdueTasks = `-- name: FindOverdueTasks
+SELECT name, description, created_on as created, completed_on as completed, due_date 
+FROM togo.tasks 
+WHERE due_date < CURRENT_TIMESTAMP;
+`
+
 func NewPgStore(connectionURI string) PgStore {
-	p, err := pgxpool.Connect(context.TODO(), connectionURI)
+	p, err := pgxpool.New(context.TODO(), connectionURI)
 	if err != nil {
 		panic("cannot connect to postgres backing store")
 	}
@@ -91,6 +97,33 @@ func (p PgStore) FindTasksByDueDate(d time.Time) ([]togo.Task, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+	tasks := []togo.Task{}
+	for rows.Next() {
+		var t togo.Task
+		if err := rows.Scan(
+			&t.Name,
+			&t.Description,
+			&t.Created,
+			&t.Completed,
+			&t.DueDate,
+		); err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return tasks, nil
+}
+
+func (p PgStore) FindOverdueTasks() ([]togo.Task, error) {
+	rows, err := p.pool.Query(context.TODO(), findOverdueTasks)
+	if err != nil {
+		return nil, err
+	}
+
 	defer rows.Close()
 	tasks := []togo.Task{}
 	for rows.Next() {

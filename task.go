@@ -17,7 +17,7 @@ func NewTask(name, description string) Task {
 }
 
 func (t *Task) IsCompleted() bool {
-	return t.Completed != nil && t.Completed.After(time.Now())
+	return t.Completed != nil && t.Completed.Before(time.Now())
 }
 
 func (t *Task) Overdue() bool {
