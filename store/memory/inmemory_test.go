@@ -126,7 +126,7 @@ func TestOverdueTasksCanBeRetrieved(t *testing.T) {
 		task := togo.NewTask(f.Person().Name(), f.Lorem().Paragraph(3))
 		durationString := fmt.Sprintf("%dh", start*24)
 		duration, _ := time.ParseDuration(durationString)
-		dueDate := time.Now().UTC().Add(time.Hour * duration)
+		dueDate := time.Now().Add(time.Hour * duration)
 		task.AddDueDate(dueDate)
 
 		ms.AddOrUpdateTask(task)
@@ -148,7 +148,7 @@ func TestTasksCanBeRetrievedByDueDate(t *testing.T) {
 	// start with two days ago
 	start := -2
 
-	now := time.Now().UTC()
+	now := time.Now()
 
 	for i := 0; i < 10; i++ {
 		start += i

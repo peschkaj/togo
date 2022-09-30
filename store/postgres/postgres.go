@@ -2,141 +2,76 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
-	"github.com/jackc/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"errors"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/peschkaj/togo"
-	"time"
 )
 
 type PgStore struct {
-	pool    *pgxpool.Pool
-	queries *Queries
+	pool *pgxpool.Pool
 }
 
-const addOrUpdateTask = `-- name: AddOrUpdateTask :exec
+const addOrUpdateTask = `-- name: AddOrUpdateTask 
 INSERT INTO togo.tasks (name, description, created_on, completed_on, due_date)
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (name) DO UPDATE
-    SET description = $2, created_on = $3, completed_on = $4, due_date = $5
+    SET description = $2, created_on = $3, completed_on = $4, due_date = $5;
+`
+
+const removeTask = `-- name: RemoveTask
+DELETE FROM togo.tasks WHERE name = $1;
+`
+
+const findTaskByName = `-- name: FindTaskByName 
+SELECT name, description, created_on as created, completed_on as completed, due_date
+FROM togo.tasks 
+WHERE name = $1;
 `
 
 func NewPgStore(connectionURI string) PgStore {
-	p, err := pgxpool.New(context.TODO(), connectionURI)
+	p, err := pgxpool.Connect(context.TODO(), connectionURI)
 	if err != nil {
 		panic("cannot connect to postgres backing store")
 	}
 
-	q := New(p)
-	return PgStore{pool: p, queries: q}
+	return PgStore{pool: p}
 }
 
 func (p PgStore) AddOrUpdateTask(t togo.Task) error {
-	_, err := p.pool.Exec(
-		context.TODO(),
+	_, err := p.pool.Exec(context.TODO(),
 		addOrUpdateTask,
 		t.Name,
 		t.Description,
 		t.Created,
 		t.Completed,
-		t.DueOn())
-
-	return err
+		t.DueOn(),
+	)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (p PgStore) RemoveTask(taskName string) error {
-	_, err := p.pool.Exec(
-		context.TODO(),
+	_, err := p.pool.Exec(context.TODO(),
 		removeTask,
 		taskName)
-
-	return err
+	if err != nil {
+		return errors.New("unable to remove task")
+	}
+	return nil
 }
-
-const findByName = `-- name: FindByName :one
-SELECT name, description, created_on::timestamptz, completed_on::timestamptz, due_date::timestamptz FROM togo.tasks WHERE name = $1
-`
 
 func (p PgStore) FindTaskByName(name string) (togo.Task, error) {
-	var t togo.Task
+	row := p.pool.QueryRow(context.TODO(), findTaskByName, name)
+	var i togo.Task
+	err := row.Scan(
+		&i.Name,
+		&i.Description,
+		&i.Created,
+		&i.Completed,
+		&i.DueDate,
+	)
 
-	rows, err := p.pool.Query(context.TODO(),
-		findByName,
-		name)
-	defer rows.Close()
-	if err != nil {
-		return t, err
-	}
-
-	if rows.Next() {
-		var taskName, description string
-		var created pgtype.Timestamptz
-		var completed pgtype.Timestamptz
-		var dueDate pgtype.Timestamptz
-		err := rows.Scan(&taskName, &description, &created, &completed, &dueDate)
-		if err != nil {
-			return t, err
-		}
-
-		t.Name = taskName
-		t.Description = description
-		t.Created = created.Time
-		t.Completed = timestamptzToTime(completed)
-
-		d := timestamptzToTime(dueDate)
-		if d != nil {
-			t.AddDueDate(*d)
-		}
-	}
-
-	return t, nil
-}
-
-func timestamptzToTime(ts pgtype.Timestamptz) *time.Time {
-	if ts.Status == pgtype.Null {
-		return nil
-	}
-	t := ts.Time
-	return &t
-}
-
-//func (p PgStore) FindTaskByName(name string) (*togo.Task, bool) {
-//	byName, err := p.queries.FindByName(context.TODO(), name)
-//	if err != nil {
-//		return nil, false
-//	}
-//
-//	var completed *time.Time
-//	if byName.CompletedOn.Status == pgtype.Present {
-//		completed = &byName.CompletedOn.Time
-//	}
-//
-//	task := togo.Task{
-//		Name:        byName.Name,
-//		Description: byName.Description,
-//		Created:     byName.CreatedOn.Time,
-//		Completed:   completed,
-//	}
-//
-//	if byName.DueDate.Status == pgtype.Present {
-//		task.AddDueDate(byName.DueDate.Time)
-//	}
-//
-//	return &task, true
-//}
-
-func nullTimeToTime(time sql.NullTime) *time.Time {
-	if !time.Valid {
-		return nil
-	}
-
-	return &time.Time
-}
-
-func timeToNullTime(time *time.Time) sql.NullTime {
-	if time == nil {
-		return sql.NullTime{Valid: false}
-	}
-
-	return sql.NullTime{Time: *time, Valid: true}
+	return i, err
 }

@@ -9,23 +9,23 @@ type Task struct {
 	Description string
 	Created     time.Time
 	Completed   *time.Time
-	dueDate     *time.Time
+	DueDate     *time.Time
 }
 
 func NewTask(name, description string) Task {
-	return Task{Name: name, Description: description, Created: time.Now().UTC()}
+	return Task{Name: name, Description: description, Created: time.Now()}
 }
 
 func (t *Task) IsCompleted() bool {
-	return t.Completed != nil && t.Completed.After(time.Now().UTC())
+	return t.Completed != nil && t.Completed.After(time.Now())
 }
 
 func (t *Task) Overdue() bool {
-	return t.dueDate != nil && t.dueDate.Before(time.Now().UTC())
+	return t.DueDate != nil && t.DueDate.Before(time.Now())
 }
 
 func (t *Task) Complete() {
-	completionTime := time.Now().UTC()
+	completionTime := time.Now()
 	t.Completed = &completionTime
 }
 
@@ -37,9 +37,9 @@ func (t *Task) CompletionDate() *time.Time {
 func (t *Task) AddDueDate(due time.Time) {
 	yyyy, mm, dd := due.Date()
 	newDate := time.Date(yyyy, mm, dd, 0, 0, 0, 0, time.UTC)
-	t.dueDate = &newDate
+	t.DueDate = &newDate
 }
 
 func (t *Task) DueOn() *time.Time {
-	return t.dueDate
+	return t.DueDate
 }
