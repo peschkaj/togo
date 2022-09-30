@@ -2,83 +2,117 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/peschkaj/togo"
 	"time"
 )
 
 type PgStore struct {
-	pool    *pgxpool.Pool
-	queries *Queries
+	pool *pgxpool.Pool
 }
 
+const addOrUpdateTask = `-- name: AddOrUpdateTask 
+INSERT INTO togo.tasks (name, description, created_on, completed_on, due_date)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (name) DO UPDATE
+    SET description = $2, created_on = $3, completed_on = $4, due_date = $5;
+`
+
+const removeTask = `-- name: RemoveTask
+DELETE FROM togo.tasks WHERE name = $1;
+`
+
+const findTaskByName = `-- name: FindTaskByName 
+SELECT name, description, created_on as created, completed_on as completed, due_date
+FROM togo.tasks 
+WHERE name = $1;
+`
+
+const findTasksByDueDate = `-- name: FindTasksByDueDate
+SELECT name, description, created_on as created, completed_on as completed, due_date
+FROM togo.tasks 
+WHERE due_date BETWEEN $1 AND $2;
+`
+
 func NewPgStore(connectionURI string) PgStore {
-	pool, err := pgxpool.Connect(context.Background(), connectionURI)
+	p, err := pgxpool.Connect(context.TODO(), connectionURI)
 	if err != nil {
 		panic("cannot connect to postgres backing store")
 	}
-	q := New(pool)
-	return PgStore{pool: pool, queries: q}
+
+	return PgStore{pool: p}
 }
 
-func (p PgStore) AddOrUpdateTask(t togo.Task) {
-
-	params := AddOrUpdateTaskParams{
-		Name:        t.Name,
-		Description: t.Description,
-		CreatedOn:   t.Created,
-		DueDate:     timeToNullTime(t.DueOn()),
-		CompletedOn: timeToNullTime(t.Completed),
-	}
-
-	err := p.queries.AddOrUpdateTask(context.TODO(), params)
+func (p PgStore) AddOrUpdateTask(t togo.Task) error {
+	_, err := p.pool.Exec(context.TODO(),
+		addOrUpdateTask,
+		t.Name,
+		t.Description,
+		t.Created,
+		t.Completed,
+		t.DueOn(),
+	)
 	if err != nil {
-		panic("unable to add or update task")
+		return err
 	}
+	return nil
 }
 
-func (p PgStore) RemoveTask(task togo.Task) bool {
-	err := p.queries.RemoveTask(context.TODO(), task.Name)
+func (p PgStore) RemoveTask(taskName string) error {
+	_, err := p.pool.Exec(context.TODO(),
+		removeTask,
+		taskName)
 	if err != nil {
-		return false
+		return errors.New("unable to remove task")
 	}
-
-	return true
+	return nil
 }
 
-func (p PgStore) FindTaskByName(name string) (*togo.Task, bool) {
-	byName, err := p.queries.FindByName(context.TODO(), name)
+func (p PgStore) FindTaskByName(name string) (togo.Task, error) {
+	row := p.pool.QueryRow(context.TODO(), findTaskByName, name)
+	var i togo.Task
+	err := row.Scan(
+		&i.Name,
+		&i.Description,
+		&i.Created,
+		&i.Completed,
+		&i.DueDate,
+	)
+
+	return i, err
+}
+
+func (p PgStore) FindTasksByDueDate(d time.Time) ([]togo.Task, error) {
+	start := timeToDate(d)
+	end := timeToDate(d).Add(24 * time.Hour)
+
+	rows, err := p.pool.Query(context.TODO(), findTasksByDueDate, start, end)
 	if err != nil {
-		return nil, false
+		return nil, err
 	}
-
-	task := togo.Task{
-		Name:        byName.Name,
-		Description: byName.Description,
-		Created:     byName.CreatedOn,
-		Completed:   nullTimeToTime(byName.CompletedOn),
+	defer rows.Close()
+	tasks := []togo.Task{}
+	for rows.Next() {
+		var t togo.Task
+		if err := rows.Scan(
+			&t.Name,
+			&t.Description,
+			&t.Created,
+			&t.Completed,
+			&t.DueDate,
+		); err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, t)
 	}
-
-	if byName.DueDate.Valid {
-		task.AddDueDate(byName.DueDate.Time)
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
-
-	return &task, true
+	return tasks, nil
 }
 
-func nullTimeToTime(time sql.NullTime) *time.Time {
-	if !time.Valid {
-		return nil
-	}
-
-	return &time.Time
-}
-
-func timeToNullTime(time *time.Time) sql.NullTime {
-	if time == nil {
-		return sql.NullTime{Valid: false}
-	}
-
-	return sql.NullTime{Time: *time, Valid: true}
+func timeToDate(t time.Time) time.Time {
+	yyyy, mm, dd := t.Date()
+	return time.Date(yyyy, mm, dd, 0, 0, 0, 0, t.Location())
 }

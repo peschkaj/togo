@@ -85,7 +85,7 @@ func (ms InMemoryStore) All() []togo.Task {
 func (ms InMemoryStore) OverdueTasks() []togo.Task {
 	iter := ms.byDueDate.Iterator()
 	var tasks []togo.Task
-	now := time.Now().UTC()
+	now := time.Now()
 
 loop:
 	for iter.HasNext() {
