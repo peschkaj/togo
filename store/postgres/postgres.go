@@ -41,6 +41,15 @@ FROM togo.tasks
 WHERE due_date < CURRENT_TIMESTAMP;
 `
 
+const countTasks = `-- name: CountTasks
+SELECT COUNT(*) FROM togo.Tasks;
+`
+
+const allTasks = `-- name: AllTasks
+SELECT name, description, created_on as created, completed_on as completed, due_date 
+FROM togo.tasks 
+`
+
 func NewPgStore(connectionURI string) PgStore {
 	p, err := pgxpool.New(context.TODO(), connectionURI)
 	if err != nil {
@@ -120,6 +129,41 @@ func (p PgStore) FindTasksByDueDate(d time.Time) ([]togo.Task, error) {
 
 func (p PgStore) FindOverdueTasks() ([]togo.Task, error) {
 	rows, err := p.pool.Query(context.TODO(), findOverdueTasks)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+	tasks := []togo.Task{}
+	for rows.Next() {
+		var t togo.Task
+		if err := rows.Scan(
+			&t.Name,
+			&t.Description,
+			&t.Created,
+			&t.Completed,
+			&t.DueDate,
+		); err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return tasks, nil
+}
+
+func (p PgStore) Count() (int, error) {
+	row := p.pool.QueryRow(context.TODO(), countTasks)
+	var count int
+	err := row.Scan(&count)
+
+	return count, err
+}
+
+func (p PgStore) All() ([]togo.Task, error) {
+	rows, err := p.pool.Query(context.TODO(), allTasks)
 	if err != nil {
 		return nil, err
 	}

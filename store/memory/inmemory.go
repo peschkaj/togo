@@ -15,42 +15,43 @@ func NewMemoryStore() InMemoryStore {
 	return InMemoryStore{ts: art.New(), byDueDate: art.New()}
 }
 
-func (ms InMemoryStore) AddOrUpdateTask(t togo.Task) {
+func (ms InMemoryStore) AddOrUpdateTask(t togo.Task) error {
 	ms.ts.Insert(art.Key(t.Name), t)
 	addOrUpdateByDueDate(ms.byDueDate, t)
+	return nil
 }
 
-func (ms InMemoryStore) RemoveTask(t togo.Task) bool {
-	_, removed := ms.ts.Delete(art.Key(t.Name))
+func (ms InMemoryStore) RemoveTask(t togo.Task) error {
+	ms.ts.Delete(art.Key(t.Name))
 	removeByDueDate(ms.byDueDate, t)
-	return removed
+	return nil
 }
 
-func (ms InMemoryStore) FindTaskByName(name string) (*togo.Task, bool) {
+func (ms InMemoryStore) FindTaskByName(name string) (togo.Task, error) {
 	value, found := ms.ts.Search(art.Key(name))
 
 	if !found {
-		return nil, found
+		return togo.Task{}, nil
 	}
 
 	switch t := value.(type) {
 	case togo.Task:
-		return &t, true
+		return t, nil
 	default:
-		return nil, false
+		panic("type mismatch in index")
 	}
 }
 
-func (ms InMemoryStore) FindByDueDate(dueDate *time.Time) []togo.Task {
+func (ms InMemoryStore) FindByDueDate(dueDate *time.Time) ([]togo.Task, error) {
 	key := dateToKey(dueDate)
 	value, found := ms.byDueDate.Search(key)
 	if !found {
-		return nil
+		return nil, nil
 	}
 
 	switch tasks := value.(type) {
 	case []togo.Task:
-		return tasks
+		return tasks, nil
 	default:
 		panic("type mismatch reading from index")
 	}
@@ -60,7 +61,7 @@ func (ms InMemoryStore) Count() int {
 	return ms.ts.Size()
 }
 
-func (ms InMemoryStore) All() []togo.Task {
+func (ms InMemoryStore) All() ([]togo.Task, error) {
 	items := []togo.Task{}
 
 	iter := ms.ts.Iterator()
@@ -68,7 +69,7 @@ func (ms InMemoryStore) All() []togo.Task {
 	for iter.HasNext() {
 		node, err := iter.Next()
 		if err != nil {
-			break
+			return nil, err
 		}
 
 		switch t := node.Value().(type) {
@@ -79,10 +80,10 @@ func (ms InMemoryStore) All() []togo.Task {
 		}
 	}
 
-	return items
+	return items, nil
 }
 
-func (ms InMemoryStore) OverdueTasks() []togo.Task {
+func (ms InMemoryStore) OverdueTasks() ([]togo.Task, error) {
 	iter := ms.byDueDate.Iterator()
 	var tasks []togo.Task
 	now := time.Now()
@@ -91,7 +92,7 @@ loop:
 	for iter.HasNext() {
 		node, err := iter.Next()
 		if err != nil {
-			return tasks
+			return tasks, nil
 		}
 
 		switch nodeTasks := node.Value().(type) {
@@ -111,7 +112,7 @@ loop:
 		}
 	}
 
-	return tasks
+	return tasks, nil
 }
 
 func addOrUpdateByDueDate(tree art.Tree, t togo.Task) {
