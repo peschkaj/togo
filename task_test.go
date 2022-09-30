@@ -5,7 +5,7 @@ import "testing"
 func TestNewTaskIsNotCompleted(t *testing.T) {
 	task := NewTask("name", "description")
 
-	if task.Completed() {
+	if task.IsCompleted() {
 		t.Error("a new task should not be Completed")
 	}
 }

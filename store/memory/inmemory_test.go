@@ -34,15 +34,15 @@ func TestUpdatedTaskIsChanged(t *testing.T) {
 	f := faker.New()
 
 	task := togo.NewTask(f.Person().Name(), f.Lorem().Paragraph(1))
-	ms.AddOrUpdateTask(task)
+	_ = ms.AddOrUpdateTask(task)
 	originalTask := task
 
 	task.Description = f.Lorem().Paragraph(3)
-	ms.AddOrUpdateTask(task)
+	_ = ms.AddOrUpdateTask(task)
 
-	updatedTask, found := ms.FindTaskByName(task.Name)
-	if !found {
-		t.Error("task saved but not found after update")
+	updatedTask, err := ms.FindTaskByName(task.Name)
+	if err != nil {
+		t.Error("task saved but not err after update")
 	}
 
 	if updatedTask.Description == originalTask.Description {
@@ -57,18 +57,18 @@ func TestTasksCanBeRetrievedByName(t *testing.T) {
 	task := togo.NewTask(f.Person().Name(), f.Lorem().Paragraph(1))
 
 	// add the task we want to find
-	ms.AddOrUpdateTask(task)
+	_ = ms.AddOrUpdateTask(task)
 	// and several other tasks to ensure we're not testing a degenerate case
 	for i := 0; i < 3; i++ {
-		ms.AddOrUpdateTask(togo.NewTask(f.Person().Name(), f.Lorem().Paragraph(3)))
+		_ = ms.AddOrUpdateTask(togo.NewTask(f.Person().Name(), f.Lorem().Paragraph(3)))
 	}
 
-	otherTask, found := ms.FindTaskByName(task.Name)
-	if !found {
+	otherTask, err := ms.FindTaskByName(task.Name)
+	if err != nil {
 		t.Error("unable to find task by name")
 	}
 
-	if task != *otherTask {
+	if otherTask != task {
 		t.Error("found task wasn't the same as original task")
 	}
 }
@@ -79,12 +79,12 @@ func TestFindByNameReturnsFalseWhenNotFound(t *testing.T) {
 
 	// add several tasks to ensure we're not testing a degenerate case
 	for i := 0; i < 3; i++ {
-		ms.AddOrUpdateTask(togo.NewTask(f.Person().Name(), f.Lorem().Paragraph(3)))
+		_ = ms.AddOrUpdateTask(togo.NewTask(f.Person().Name(), f.Lorem().Paragraph(3)))
 	}
 
-	_, found := ms.FindTaskByName("asdf")
+	_, err := ms.FindTaskByName("asdf")
 
-	if found != false {
+	if err != nil {
 		t.Error("searched for a task that does not exist and found it")
 	}
 }
@@ -95,22 +95,20 @@ func TestRemovedTaskCannotBeFound(t *testing.T) {
 	originalCount := ms.Count()
 
 	task := togo.NewTask(f.Person().Name(), f.Lorem().Paragraph(1))
-	ms.AddOrUpdateTask(task)
+	_ = ms.AddOrUpdateTask(task)
 	for i := 0; i < 3; i++ {
-		ms.AddOrUpdateTask(togo.NewTask(f.Person().Name(), f.Lorem().Paragraph(3)))
+		_ = ms.AddOrUpdateTask(togo.NewTask(f.Person().Name(), f.Lorem().Paragraph(3)))
 	}
 
 	if !(ms.Count() > originalCount) {
 		t.Error("current count is not greater than original count")
 	}
 
-	removed := ms.RemoveTask(task)
-	if !removed {
+	if err := ms.RemoveTask(task); err != nil {
 		t.Error("unable to remove task")
 	}
 
-	_, found := ms.FindTaskByName(task.Name)
-	if found {
+	if _, err := ms.FindTaskByName(task.Name); err != nil {
 		t.Error("found task in store but should not be able to")
 	}
 }
@@ -132,7 +130,10 @@ func TestOverdueTasksCanBeRetrieved(t *testing.T) {
 		ms.AddOrUpdateTask(task)
 	}
 
-	overdueTasks := ms.OverdueTasks()
+	overdueTasks, err := ms.OverdueTasks()
+	if err != nil {
+		t.Error(err)
+	}
 	if overdueTasks == nil {
 		t.Error("no overdue tasks found")
 	}
@@ -161,10 +162,13 @@ func TestTasksCanBeRetrievedByDueDate(t *testing.T) {
 		dueDate := now.Add(time.Hour * duration)
 		task.AddDueDate(dueDate)
 
-		ms.AddOrUpdateTask(task)
+		_ = ms.AddOrUpdateTask(task)
 	}
 
-	tasks := ms.FindByDueDate(&now)
+	tasks, err := ms.FindByDueDate(&now)
+	if err != nil {
+		t.Error(err)
+	}
 	if tasks == nil {
 		t.Error("no tasks found")
 	}
@@ -179,9 +183,12 @@ func TestTasksCanBeRetrievedByNilDueDate(t *testing.T) {
 	f := faker.New()
 
 	task := togo.NewTask(f.Person().Name(), f.Lorem().Paragraph(1))
-	ms.AddOrUpdateTask(task)
+	_ = ms.AddOrUpdateTask(task)
 
-	tasks := ms.FindByDueDate(nil)
+	tasks, err := ms.FindByDueDate(nil)
+	if err != nil {
+		t.Error(err)
+	}
 	if tasks == nil {
 		t.Error("no tasks found with nil due date")
 	}

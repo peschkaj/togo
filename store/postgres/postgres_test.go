@@ -189,22 +189,18 @@ func TestOverdueTasksCanBeRetrieved(t *testing.T) {
 
 	for _, task := range tasks {
 		err := pg.AddOrUpdateTask(task)
-		t.Cleanup(func() {
-			err := pg.RemoveTask(task.Name)
-			if err != nil {
-				return
-			}
-		})
 		if err != nil {
-			t.Error(err)
-			return
+			t.Fatal(err)
 		}
+		t.Cleanup(func() {
+			_ = pg.RemoveTask(task.Name)
+		})
+
 	}
 
 	found, err := pg.FindOverdueTasks()
 	if err != nil {
 		t.Error(err)
-		return
 	}
 
 	if len(found) != 3 {
