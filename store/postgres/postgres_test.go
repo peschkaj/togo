@@ -23,13 +23,12 @@ func TestTaskCanBePersisted(t *testing.T) {
 	f := faker.New()
 
 	taskName := f.Person().Name()
-
-	//t.Cleanup(func() {
-	//	err := pg.RemoveTask(taskName)
-	//	if err != nil {
-	//		return
-	//	}
-	//})
+	t.Cleanup(func() {
+		err := pg.RemoveTask(taskName)
+		if err != nil {
+			return
+		}
+	})
 
 	dueDate := daysFromNow(3)
 
@@ -67,6 +66,13 @@ func TestSimpleTaskCanBeRetrievedByName(t *testing.T) {
 	f := faker.New()
 
 	taskName := f.Person().Name()
+	t.Cleanup(func() {
+		err := pg.RemoveTask(taskName)
+		if err != nil {
+			return
+		}
+	})
+
 	expected := togo.NewTask(taskName, f.Lorem().Paragraph(3))
 	err := pg.AddOrUpdateTask(expected)
 	if err != nil {
@@ -108,6 +114,12 @@ func TestTasksCanBeRetrievedByName(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
+		t.Cleanup(func() {
+			err := pg.RemoveTask(testCase.task.Name)
+			if err != nil {
+				return
+			}
+		})
 		outcome, err := pg.FindTaskByName(expected.Name)
 
 		if err != nil {
@@ -118,6 +130,46 @@ func TestTasksCanBeRetrievedByName(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
+	}
+}
+
+func TestTasksCanBeRetrievedByDueDate(t *testing.T) {
+	pg := NewPgStore(connectionString)
+	f := faker.New()
+
+	var created = time.Now()
+
+	tasks := []togo.Task{
+		{Name: f.Person().Name(), Description: f.Lorem().Paragraph(3), Created: created, DueDate: &created},
+		{Name: f.Person().Name(), Description: f.Lorem().Paragraph(3), Created: created, DueDate: &created},
+		{Name: f.Person().Name(), Description: f.Lorem().Paragraph(3), Created: created, DueDate: &created},
+		{Name: f.Person().Name(), Description: f.Lorem().Paragraph(3), Created: *daysFromNow(-1), Completed: daysFromNow(1)},
+		{Name: f.Person().Name(), Description: f.Lorem().Paragraph(3), Created: *daysFromNow(-2), Completed: daysFromNow(2)},
+	}
+
+	for _, task := range tasks {
+		err := pg.AddOrUpdateTask(task)
+		t.Cleanup(func() {
+			err := pg.RemoveTask(task.Name)
+			if err != nil {
+				return
+			}
+		})
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+	}
+
+	found, err := pg.FindTasksByDueDate(created)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if len(found) != 3 {
+		t.Errorf("expected %d found %d", 3, len(found))
 	}
 }
 

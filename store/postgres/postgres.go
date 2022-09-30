@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/peschkaj/togo"
+	"time"
 )
 
 type PgStore struct {
@@ -26,6 +27,12 @@ const findTaskByName = `-- name: FindTaskByName
 SELECT name, description, created_on as created, completed_on as completed, due_date
 FROM togo.tasks 
 WHERE name = $1;
+`
+
+const findTasksByDueDate = `-- name: FindTasksByDueDate
+SELECT name, description, created_on as created, completed_on as completed, due_date
+FROM togo.tasks 
+WHERE due_date BETWEEN $1 AND $2;
 `
 
 func NewPgStore(connectionURI string) PgStore {
@@ -74,4 +81,38 @@ func (p PgStore) FindTaskByName(name string) (togo.Task, error) {
 	)
 
 	return i, err
+}
+
+func (p PgStore) FindTasksByDueDate(d time.Time) ([]togo.Task, error) {
+	start := timeToDate(d)
+	end := timeToDate(d).Add(24 * time.Hour)
+
+	rows, err := p.pool.Query(context.TODO(), findTasksByDueDate, start, end)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	tasks := []togo.Task{}
+	for rows.Next() {
+		var t togo.Task
+		if err := rows.Scan(
+			&t.Name,
+			&t.Description,
+			&t.Created,
+			&t.Completed,
+			&t.DueDate,
+		); err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return tasks, nil
+}
+
+func timeToDate(t time.Time) time.Time {
+	yyyy, mm, dd := t.Date()
+	return time.Date(yyyy, mm, dd, 0, 0, 0, 0, t.Location())
 }
