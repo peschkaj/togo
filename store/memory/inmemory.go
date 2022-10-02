@@ -3,6 +3,7 @@ package memory
 import (
 	"github.com/peschkaj/togo"
 	art "github.com/plar/go-adaptive-radix-tree"
+	"sort"
 	"time"
 )
 
@@ -13,6 +14,16 @@ type InMemoryStore struct {
 
 func NewMemoryStore() InMemoryStore {
 	return InMemoryStore{ts: art.New(), byDueDate: art.New()}
+}
+
+func SortByPriority(ts togo.Tasks) []togo.Task {
+	if len(ts) == 0 {
+		return ts
+	}
+
+	sorted := ts
+	sort.Sort(sorted)
+	return sorted
 }
 
 func (ms InMemoryStore) AddOrUpdateTask(t togo.Task) error {

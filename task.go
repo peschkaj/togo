@@ -4,9 +4,19 @@ import (
 	"time"
 )
 
+type Priority int32
+
+const (
+	None   Priority = 0
+	Low             = 1
+	Medium          = 2
+	High            = 3
+)
+
 type Task struct {
 	Name        string
 	Description string
+	Priority    Priority
 	Created     time.Time
 	Completed   *time.Time
 	DueDate     *time.Time
@@ -42,4 +52,18 @@ func (t *Task) AddDueDate(due time.Time) {
 
 func (t *Task) DueOn() *time.Time {
 	return t.DueDate
+}
+
+type Tasks []Task
+
+func (ts Tasks) Len() int {
+	return len(ts)
+}
+
+func (ts Tasks) Less(i, j int) bool {
+	return ts[i].Priority < ts[j].Priority
+}
+
+func (ts Tasks) Swap(i, j int) {
+	ts[i], ts[j] = ts[j], ts[i]
 }

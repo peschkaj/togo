@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS togo.tasks (
     id BIGSERIAL PRIMARY KEY ,
     name VARCHAR(100) NOT NULL,
     description VARCHAR NOT NULL,
+    priority INT NOT NULL,
     created_on TIMESTAMPTZ(6) NOT NULL,
     completed_on TIMESTAMPTZ(6) NULL,
     due_date TIMESTAMPTZ(6) NULL
