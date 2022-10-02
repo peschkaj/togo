@@ -11,9 +11,11 @@ CREATE TABLE IF NOT EXISTS togo.projects (
     description VARCHAR NOT NULL
 );
 
+CREATE UNIQUE INDEX ux_projects_name ON togo.projects(name);
+
 CREATE TABLE IF NOT EXISTS togo.tasks (
     id BIGSERIAL PRIMARY KEY ,
-    project_id BIGINT NOT NULL REFERENCES togo.projects(id),
+    project_id BIGINT NULL REFERENCES togo.projects(id),
     name VARCHAR(100) NOT NULL,
     description VARCHAR NOT NULL,
     priority INT NOT NULL DEFAULT 0,

@@ -53,17 +53,3 @@ func (t *Task) AddDueDate(due time.Time) {
 func (t *Task) DueOn() *time.Time {
 	return t.DueDate
 }
-
-type Tasks []Task
-
-func (ts Tasks) Len() int {
-	return len(ts)
-}
-
-func (ts Tasks) Less(i, j int) bool {
-	return ts[i].Priority < ts[j].Priority
-}
-
-func (ts Tasks) Swap(i, j int) {
-	ts[i], ts[j] = ts[j], ts[i]
-}
